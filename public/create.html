@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crear Nuevo Juego</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      color: #1a202c;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: #718096;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    label .required {
+      color: #e53e3e;
+      margin-left: 2px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    input[aria-invalid="true"], 
+    select[aria-invalid="true"], 
+    textarea[aria-invalid="true"] {
+      border-color: #e53e3e;
+    }
+
+    input[aria-invalid="true"]:focus,
+    select[aria-invalid="true"]:focus,
+    textarea[aria-invalid="true"]:focus {
+      box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .help-text {
+      display: block;
+      font-size: 13px;
+      color: #718096;
+      margin-top: 6px;
+    }
+
+    .error-message {
+      display: none;
+      color: #e53e3e;
+      font-size: 13px;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    .error-message.visible {
+      display: block;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .submit-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .submit-btn .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+
+    .submit-btn.loading .spinner {
+      display: block;
+    }
+
+    .submit-btn.loading .btn-text {
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .alert {
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .alert.visible {
+      display: block;
+    }
+
+    .alert-success {
+      background: #c6f6d5;
+      color: #22543d;
+      border: 1px solid #9ae6b4;
+    }
+
+    .alert-error {
+      background: #fed7d7;
+      color: #742a2a;
+      border: 1px solid #fc8181;
+    }
+
+    .back-link {
+      display: inline-block;
+      color: #667eea;
+      text-decoration: none;
+      font-size: 14px;
+      margin-top: 20px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover {
+      color: #764ba2;
+    }
+
+    .autosave-indicator {
+      font-size: 12px;
+      color: #718096;
+      text-align: right;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 24px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎮 Crear Nuevo Juego</h1>
+      <p>Completa la información del juego</p>
+    </div>
+
+    <div id="alertSuccess" class="alert alert-success" role="alert"></div>
+    <div id="alertError" class="alert alert-error" role="alert"></div>
+
+    <form id="gameForm" novalidate>
+      <div class="form-group">
+        <label for="nombre">
+          Nombre del Juego
+          <span class="required">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="nombre" 
+          name="nombre"
+          placeholder="Ej: The Legend of Zelda"
+          aria-describedby="nombreHelp nombreError"
+          required
+        >
+        <span id="nombreHelp" class="help-text">
+          Mínimo 2 caracteres, máximo 100
+        </span>
+        <span id="nombreError" class="error-message" role="alert"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="genero">Género</label>
+        <input 
+          type="text" 
+          id="genero" 
+          name="genero"
+          placeholder="Ej: Aventura, RPG, Acción"
+          aria-describedby="generoHelp generoError"
+          list="generoSuggestions"
+        >
+        <datalist id="generoSuggestions">
+          <option value="Aventura">
+          <option value="RPG">
+          <option value="Acción">
+          <option value="Deportes">
+          <option value="Estrategia">
+          <option value="Puzzle">
+          <option value="Simulación">
+          <option value="Terror">
+        </datalist>
+        <span id="generoHelp" class="help-text">
+          Opcional. Selecciona o escribe un género
+        </span>
+        <span id="generoError" class="error-message" role="alert"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="precio">Precio (USD)</label>
+        <input 
+          type="number" 
+          id="precio" 
+          name="precio"
+          placeholder="29.99"
+          step="0.01"
+          min="0"
+          aria-describedby="precioHelp precioError"
+        >
+        <span id="precioHelp" class="help-text">
+          Opcional. Debe ser un valor positivo o cero
+        </span>
+        <span id="precioError" class="error-message" role="alert"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="descripcion">Descripción</label>
+        <textarea 
+          id="descripcion" 
+          name="descripcion"
+          placeholder="Describe el juego, su historia, características principales..."
+          aria-describedby="descripcionHelp descripcionError"
+        ></textarea>
+        <span id="descripcionHelp" class="help-text">
+          Opcional. Añade detalles sobre el juego
+        </span>
+        <span id="descripcionError" class="error-message" role="alert"></span>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">
+        <span class="btn-text">Crear Juego</span>
+        <div class="spinner"></div>
+      </button>
+
+      <div class="autosave-indicator" id="autosaveIndicator"></div>
+    </form>
+
+    <a href="index.html" class="back-link">← Volver al listado</a>
+  </div>
+
+  <script>
+    const form = document.getElementById('gameForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const alertSuccess = document.getElementById('alertSuccess');
+    const alertError = document.getElementById('alertError');
+    const autosaveIndicator = document.getElementById('autosaveIndicator');
+
+    const fields = {
+      nombre: document.getElementById('nombre'),
+      genero: document.getElementById('genero'),
+      precio: document.getElementById('precio'),
+      descripcion: document.getElementById('descripcion')
+    };
+
+    const errors = {
+      nombre: document.getElementById('nombreError'),
+      genero: document.getElementById('generoError'),
+      precio: document.getElementById('precioError'),
+      descripcion: document.getElementById('descripcionError')
+    };
+
+    let isSubmitting = false;
+    const AUTOSAVE_KEY = 'gameForm_autosave';
+    const AUTOSAVE_INTERVAL = 5000; // 5 segundos
+
+    // Validación reglas
+    const validationRules = {
+      nombre: (value) => {
+        if (!value || value.trim().length === 0) {
+          return 'El nombre es obligatorio';
+        }
+        if (value.trim().length < 2) {
+          return 'El nombre debe tener al menos 2 caracteres';
+        }
+        if (value.length > 100) {
+          return 'El nombre no puede exceder 100 caracteres';
+        }
+        return null;
+      },
+      precio: (value) => {
+        if (value === '' || value === null) return null; // Opcional
+        const num = parseFloat(value);
+        if (isNaN(num)) {
+          return 'El precio debe ser un número válido';
+        }
+        if (num < 0) {
+          return 'El precio no puede ser negativo';
+        }
+        return null;
+      }
+    };
+
+    // Mostrar error en campo
+    function showFieldError(fieldName, message) {
+      const field = fields[fieldName];
+      const errorEl = errors[fieldName];
+      
+      field.setAttribute('aria-invalid', 'true');
+      errorEl.textContent = message;
+      errorEl.classList.add('visible');
+    }
+
+    // Limpiar error en campo
+    function clearFieldError(fieldName) {
+      const field = fields[fieldName];
+      const errorEl = errors[fieldName];
+      
+      field.setAttribute('aria-invalid', 'false');
+      errorEl.textContent = '';
+      errorEl.classList.remove('visible');
+    }
+
+    // Validar campo individual
+    function validateField(fieldName) {
+      const value = fields[fieldName].value;
+      const rule = validationRules[fieldName];
+      
+      if (!rule) return true;
+      
+      const error = rule(value);
+      if (error) {
+        showFieldError(fieldName, error);
+        return false;
+      } else {
+        clearFieldError(fieldName);
+        return true;
+      }
+    }
+
+    // Validar todos los campos
+    function validateAllFields() {
+      let isValid = true;
+      let firstErrorField = null;
+
+      Object.keys(validationRules).forEach(fieldName => {
+        if (!validateField(fieldName)) {
+          isValid = false;
+          if (!firstErrorField) {
+            firstErrorField = fields[fieldName];
+          }
+        }
+      });
+
+      if (firstErrorField) {
+        firstErrorField.focus();
+      }
+
+      return isValid;
+    }
+
+    // Validación onBlur
+    Object.keys(validationRules).forEach(fieldName => {
+      fields[fieldName].addEventListener('blur', () => {
+        validateField(fieldName);
+      });
+    });
+
+    // Mostrar alerta
+    function showAlert(type, message) {
+      hideAlerts();
+      const alert = type === 'success' ? alertSuccess : alertError;
+      alert.textContent = message;
+      alert.classList.add('visible');
+      alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Ocultar alertas
+    function hideAlerts() {
+      alertSuccess.classList.remove('visible');
+      alertError.classList.remove('visible');
+    }
+
+    // Preparar payload
+    function getFormPayload() {
+      const payload = {
+        nombre: fields.nombre.value.trim(),
+        genero: fields.genero.value.trim() || undefined,
+        descripcion: fields.descripcion.value.trim() || undefined
+      };
+
+      // Manejar precio opcional
+      const precioValue = fields.precio.value.trim();
+      if (precioValue !== '') {
+        payload.precio = parseFloat(precioValue);
+      }
+
+      return payload;
+    }
+
+    // Limpiar formulario
+    function clearForm() {
+      form.reset();
+      Object.keys(errors).forEach(clearFieldError);
+      localStorage.removeItem(AUTOSAVE_KEY);
+      autosaveIndicator.textContent = '';
+    }
+
+    // Autosave
+    function saveFormData() {
+      const data = {
+        nombre: fields.nombre.value,
+        genero: fields.genero.value,
+        precio: fields.precio.value,
+        descripcion: fields.descripcion.value,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
+      autosaveIndicator.textContent = 'Guardado automáticamente';
+      setTimeout(() => {
+        autosaveIndicator.textContent = '';
+      }, 2000);
+    }
+
+    // Restaurar datos guardados
+    function restoreFormData() {
+      const saved = localStorage.getItem(AUTOSAVE_KEY);
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          fields.nombre.value = data.nombre || '';
+          fields.genero.value = data.genero || '';
+          fields.precio.value = data.precio || '';
+          fields.descripcion.value = data.descripcion || '';
+        } catch (e) {
+          console.error('Error restoring form data:', e);
+        }
+      }
+    }
+
+    // Autosave periódico
+    setInterval(() => {
+      if (fields.nombre.value || fields.genero.value || fields.precio.value || fields.descripcion.value) {
+        saveFormData();
+      }
+    }, AUTOSAVE_INTERVAL);
+
+    // Submit del formulario
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (isSubmitting) return;
+        
+        hideAlerts();
+        
+        if (!validateAllFields()) {
+            showAlert('error', 'Por favor corrige los errores antes de continuar');
+            return;
+        }
+
+        isSubmitting = true;
+        submitBtn.disabled = true;
+        submitBtn.classList.add('loading');
+
+        try {
+            const payload = getFormPayload();
+            
+            // Cambiamos la URL para usar el endpoint correcto
+            const response = await fetch('/api/juegos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showAlert('success', '¡Juego creado exitosamente! Redirigiendo...');
+                clearForm();
+                
+                // Redirigir al listado después de 1.5 segundos
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            } else {
+                // Manejo de errores mejorado
+                const errorMessage = data.mensaje || data.error || 'Error al crear el juego';
+                showAlert('error', errorMessage);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('error', 'Error de conexión. Verifica tu conexión a internet e intenta nuevamente.');
+        } finally {
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+        }
+    });
+
+    // Restaurar datos al cargar
+    restoreFormData();
+  </script>
+</body>
+</html>
