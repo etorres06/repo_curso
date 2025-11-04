@@ -2,9 +2,23 @@ const {pool} = require('../config/BaseDatos');
 
 const ObetenerTodosLosJuegos =  async (req, res) => {
     try {
-        const consulta = 'SELECT * FROM juegos ORDER BY id ASC';
-        const resultado = await pool.query(consulta);
-        res.json(resultado.rows);
+        const { page = 1, limit = 10 } = req.query;
+        const offset = (page - 1) * limit;
+        
+        const consulta = 'SELECT * FROM juegos ORDER BY id ASC LIMIT $1 OFFSET $2';
+        const conteoConsulta = 'SELECT COUNT(*) FROM juegos';
+        
+        const [resultado, conteo] = await Promise.all([
+            pool.query(consulta, [limit, offset]),
+            pool.query(conteoConsulta)
+        ]);
+
+        res.json({
+            juegos: resultado.rows,
+            total: parseInt(conteo.rows[0].count),
+            pagina_actual: parseInt(page),
+            total_paginas: Math.ceil(parseInt(conteo.rows[0].count) / limit)
+        });
     } catch (error) {
         console.error('Error al obtener los juegos:', error.stack || error);
         res.status(500).json({ mensaje: 'Error al obtener los juegos', error: error.message });
