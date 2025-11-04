@@ -50,74 +50,104 @@ const ObetenerTodosLosJuegosPorId =  async (req, res) => {
 };
 
 const crearJuego = async (req, res) => {
-    // Lógica para crear un nuevo juego
     try {
         const { nombre, genero, plataforma, precio, fecha_lanzamiento, desarrollador, descripcion } = req.body;
-        if (!nombre || !genero || !plataforma || !precio || !fecha_lanzamiento || !desarrollador || !descripcion) {
-            return res.status(400).json({ mensaje: 'Faltan datos obligatorios para crear el juego' });
-        }
+        
+        // Validaciones
+        if (!nombre?.trim()) return res.status(400).json({ mensaje: 'El nombre es requerido' });
+        if (!genero?.trim()) return res.status(400).json({ mensaje: 'El género es requerido' });
+        if (!plataforma?.trim()) return res.status(400).json({ mensaje: 'La plataforma es requerida' });
+        if (!precio || precio <= 0) return res.status(400).json({ mensaje: 'El precio debe ser mayor a 0' });
+        if (!fecha_lanzamiento) return res.status(400).json({ mensaje: 'La fecha de lanzamiento es requerida' });
+        if (!desarrollador?.trim()) return res.status(400).json({ mensaje: 'El desarrollador es requerido' });
+        if (!descripcion?.trim()) return res.status(400).json({ mensaje: 'La descripción es requerida' });
 
         const consulta = `
             INSERT INTO juegos (nombre, genero, plataforma, precio, fecha_lanzamiento, desarrollador, descripcion)
             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
-        const valores = [nombre, genero, plataforma, precio, fecha_lanzamiento, desarrollador, descripcion];
+        const valores = [
+            nombre.trim(),
+            genero.trim(),
+            plataforma.trim(),
+            parseFloat(precio),
+            new Date(fecha_lanzamiento),
+            desarrollador.trim(),
+            descripcion.trim()
+        ];
 
-          const resultado = await pool.query(consulta, valores);
-        res.status(201).json({ mensaje: 'Juego creado exitosamente', juego: resultado.rows[0] 
-    });
-}
-    catch (error) {
+        const resultado = await pool.query(consulta, valores);
+        res.status(201).json({ 
+            mensaje: 'Juego creado exitosamente', 
+            juego: resultado.rows[0] 
+        });
+    } catch (error) {
         console.error('Error al crear un nuevo juego:', error.stack || error);
         res.status(500).json({ mensaje: 'Error al crear un nuevo juego', error: error.message });
     }
 };
 
 const actualizarJuego = async (req, res) => {
-    // Lógica para actualizar un juego existente
-    try { 
+    try {
         const { id } = req.params;
-        const { nombre, genero, plataforma, precio, fecha_lanzamiento, desarrollador, descripcion } = req.body;
+        const actualizaciones = req.body;
 
-        const consulta = `
-            UPDATE juegos
-            SET nombre = $1, genero = $2, plataforma = $3, precio = $4, fecha_lanzamiento = $5, desarrollador = $6, descripcion = $7
-            WHERE id = $8 RETURNING *`;
-        const valores = [nombre, genero, plataforma, precio, fecha_lanzamiento, desarrollador, descripcion, id];
-
-        const resultado = await pool.query(consulta, valores);
-
-        if (resultado.rows.length === 0) {
-            return res.status(404).json({ mensaje: 'Juego no encontrado para actualizar' });
+        // Verificar si el juego existe
+        const juegoExistente = await pool.query('SELECT * FROM juegos WHERE id = $1', [id]);
+        if (juegoExistente.rows.length === 0) {
+            return res.status(404).json({ mensaje: 'Juego no encontrado' });
         }
 
-        res.status(200).json({ mensaje: 'Juego actualizado exitosamente', juego: resultado.rows[0]
+        // Construir query dinámicamente
+        const campos = Object.keys(actualizaciones);
+        const valores = Object.values(actualizaciones);
+        
+        if (campos.length === 0) {
+            return res.status(400).json({ mensaje: 'No hay campos para actualizar' });
+        }
+
+        const setCampos = campos.map((campo, index) => `${campo} = $${index + 1}`).join(', ');
+        const consulta = `UPDATE juegos SET ${setCampos} WHERE id = $${campos.length + 1} RETURNING *`;
+        
+        const resultado = await pool.query(consulta, [...valores, id]);
+        
+        res.json({
+            mensaje: 'Juego actualizado exitosamente',
+            juego: resultado.rows[0]
         });
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Error al actualizar el juego:', error.stack || error);
         res.status(500).json({ mensaje: 'Error al actualizar el juego', error: error.message });
     }
 };
 
 const eliminarJuego = async (req, res) => {
-    // Lógica para eliminar un juego existente
     try {
         const { id } = req.params;
+        const { confirmacion } = req.body;
+
+        if (!confirmacion) {
+            return res.status(400).json({ 
+                mensaje: 'Se requiere confirmación para eliminar el juego',
+                instrucciones: 'Envíe { "confirmacion": true } en el body para confirmar'
+            });
+        }
+
+        // Verificar si el juego existe antes de eliminarlo
+        const juegoExistente = await pool.query('SELECT nombre FROM juegos WHERE id = $1', [id]);
+        if (juegoExistente.rows.length === 0) {
+            return res.status(404).json({ mensaje: 'Juego no encontrado' });
+        }
 
         const consulta = 'DELETE FROM juegos WHERE id = $1 RETURNING *';
         const resultado = await pool.query(consulta, [id]);
 
-        if (resultado.rows.length === 0) {
-            return res.status(404).json({ mensaje: 'Juego no encontrado para eliminar' });
-        }
-
-        res.status(200).json({ mensaje: 'Juego eliminado exitosamente', juego: resultado.rows[0]
+        res.json({
+            mensaje: 'Juego eliminado exitosamente',
+            juego: resultado.rows[0]
         });
-
     } catch (error) {
         console.error('Error al eliminar el juego:', error.stack || error);
         res.status(500).json({ mensaje: 'Error al eliminar el juego', error: error.message });
-    
     }
 };
 module.exports = {
