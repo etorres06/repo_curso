@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Juegos</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --danger-color: #dc2626;
+        }
+
+        body {
+            background-color: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .header-section {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #7c3aed 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 0.5rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background-color: #f1f5f9;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 600;
+            color: #475569;
+            white-space: nowrap;
+        }
+
+        .table tbody tr {
+            transition: background-color 0.2s;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .btn-action {
+            padding: 0.375rem 0.75rem;
+            margin: 0 0.125rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-action i {
+            font-size: 0.875rem;
+        }
+
+        .pagination {
+            margin-bottom: 0;
+        }
+
+        .pagination .page-link {
+            color: var(--primary-color);
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+        }
+
+        .skeleton-loader {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .skeleton-row {
+            height: 3rem;
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.15em;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1090;
+        }
+
+        .game-card {
+            display: none;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: white;
+            transition: box-shadow 0.2s;
+        }
+
+        .game-card:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .game-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+        }
+
+        .game-card-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .game-card-details {
+            margin-bottom: 0.75rem;
+        }
+
+        .game-card-detail {
+            display: flex;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .game-card-label {
+            font-weight: 600;
+            color: #64748b;
+            min-width: 80px;
+        }
+
+        .game-card-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 768px) {
+            .table-container {
+                display: none;
+            }
+            .game-card {
+                display: block;
+            }
+            .btn-action {
+                padding: 0.5rem 1rem;
+            }
+        }
+
+        .row-deleting {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .controls-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .limit-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .limit-control label {
+            margin: 0;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .limit-control select {
+            width: auto;
+            font-size: 0.875rem;
+        }
+
+        :focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header-section">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1"><i class="fas fa-gamepad me-2"></i>Gestión de Juegos</h1>
+                    <p class="mb-0 opacity-75">Administra tu catálogo de videojuegos</p>
+                </div>
+                <a href="create.html" class="btn btn-light" aria-label="Crear nuevo juego">
+                    <i class="fas fa-plus me-2"></i>Nuevo Juego
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="card">
+            <div class="card-body">
+                <!-- Controls -->
+                <div class="controls-section">
+                    <div class="limit-control">
+                        <label for="limitSelect">Mostrar:</label>
+                        <select id="limitSelect" class="form-select form-select-sm" aria-label="Cantidad de juegos por página">
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span class="text-muted" style="font-size: 0.875rem;">por página</span>
+                    </div>
+                    <div id="totalInfo" class="text-muted" style="font-size: 0.875rem;"></div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="skeleton-loader" style="display: none;">
+                    <div class="skeleton-row"></div>
+                    <div class="skeleton-row"></div>
+                    <div class="skeleton-row"></div>
+                    <div class="skeleton-row"></div>
+                    <div class="skeleton-row"></div>
+                </div>
+
+                <!-- Error State -->
+                <div id="errorState" class="alert alert-danger" style="display: none;" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <div class="flex-grow-1">
+                            <strong>Error al cargar los juegos</strong>
+                            <p id="errorMessage" class="mb-0 mt-1"></p>
+                        </div>
+                        <button id="retryBtn" class="btn btn-danger btn-sm" aria-label="Reintentar carga">
+                            <i class="fas fa-redo me-1"></i>Reintentar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <i class="fas fa-inbox"></i>
+                    <h3 class="h5 mt-3 mb-2">No hay juegos registrados</h3>
+                    <p class="text-muted mb-4">Comienza agregando tu primer juego al catálogo</p>
+                    <a href="create.html" class="btn btn-primary" aria-label="Crear primer juego">
+                        <i class="fas fa-plus me-2"></i>Crear Juego
+                    </a>
+                </div>
+
+                <!-- Table View (Desktop) -->
+                <div id="tableView" class="table-container" style="display: none;">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Nombre</th>
+                                <th scope="col">Género</th>
+                                <th scope="col">Precio</th>
+                                <th scope="col" class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gamesTableBody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Card View (Mobile) -->
+                <div id="cardsView"></div>
+
+                <!-- Pagination -->
+                <div id="paginationContainer" class="d-flex justify-content-between align-items-center mt-4" style="display: none;">
+                    <div class="text-muted" style="font-size: 0.875rem;" id="paginationInfo"></div>
+                    <nav aria-label="Navegación de páginas">
+                        <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="deleteModalLabel">
+                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">¿Estás seguro de que deseas eliminar este juego?</p>
+                    <p class="mb-0"><strong id="deleteGameName"></strong></p>
+                    <p class="text-muted small mb-0 mt-2">Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Configuration
+        const API_BASE_URL = '/api'; // Cambiado para usar rutas relativas
+        const CACHE_DURATION = 30000;
+        const DEBOUNCE_DELAY = 300;
+
+        // State
+        let currentPage = 1;
+        let currentLimit = 10;
+        let totalPages = 0;
+        let totalGames = 0;
+        let cache = new Map();
+        let deleteModal;
+        let gameToDelete = null;
+        let debounceTimer = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            setupEventListeners();
+            loadGames();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('limitSelect').addEventListener('change', handleLimitChange);
+            document.getElementById('retryBtn').addEventListener('click', () => loadGames());
+            document.getElementById('confirmDeleteBtn').addEventListener('click', handleDeleteConfirm);
+        }
+
+        function handleLimitChange(e) {
+            const newLimit = parseInt(e.target.value);
+            if (newLimit !== currentLimit) {
+                currentLimit = newLimit;
+                currentPage = 1;
+                cache.clear();
+                debounceLoad();
+            }
+        }
+
+        function debounceLoad() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => loadGames(), DEBOUNCE_DELAY);
+        }
+
+        async function loadGames() {
+            const cacheKey = `${currentPage}-${currentLimit}`;
+            const cachedData = cache.get(cacheKey);
+            
+            if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
+                renderGames(cachedData.data);
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/juegos?page=${currentPage}&limit=${currentLimit}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                // Cache the result
+                cache.set(cacheKey, {
+                    data: data,
+                    timestamp: Date.now()
+                });
+
+                renderGames(data);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderGames(data) {
+            const { juegos, total, page, totalPages: pages } = data;
+            
+            totalPages = pages;
+            totalGames = total;
+            currentPage = page;
+
+            hideAll();
+
+            if (juegos.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            renderTable(juegos);
+            renderCards(juegos);
+            renderPagination();
+            updateTotalInfo();
+
+            document.getElementById('tableView').style.display = 'block';
+            document.getElementById('paginationContainer').style.display = 'flex';
+        }
+
+        function renderTable(juegos) {
+            const tbody = document.getElementById('gamesTableBody');
+            tbody.innerHTML = juegos.map(game => `
+                <tr id="row-${game.id}">
+                    <td>${game.id}</td>
+                    <td><strong>${escapeHtml(game.nombre)}</strong></td>
+                    <td><span class="badge bg-secondary">${escapeHtml(game.genero)}</span></td>
+                    <td><strong>$${parseFloat(game.precio).toFixed(2)}</strong></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-info btn-action" onclick="viewGame(${game.id})" aria-label="Ver detalles de ${escapeHtml(game.nombre)}">
+                            <i class="fas fa-eye"></i> Ver
+                        </button>
+                        <button class="btn btn-sm btn-warning btn-action" onclick="editGame(${game.id})" aria-label="Editar ${escapeHtml(game.nombre)}">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn btn-sm btn-danger btn-action" onclick="confirmDelete(${game.id}, '${escapeHtml(game.nombre)}')" aria-label="Eliminar ${escapeHtml(game.nombre)}">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderCards(juegos) {
+            const cardsView = document.getElementById('cardsView');
+            cardsView.innerHTML = juegos.map(game => `
+                <div class="game-card" id="card-${game.id}">
+                    <div class="game-card-header">
+                        <h3 class="game-card-title">${escapeHtml(game.nombre)}</h3>
+                        <span class="badge bg-secondary">${escapeHtml(game.genero)}</span>
+                    </div>
+                    <div class="game-card-details">
+                        <div class="game-card-detail">
+                            <span class="game-card-label">ID:</span>
+                            <span>${game.id}</span>
+                        </div>
+                        <div class="game-card-detail">
+                            <span class="game-card-label">Precio:</span>
+                            <span><strong>$${parseFloat(game.precio).toFixed(2)}</strong></span>
+                        </div>
+                    </div>
+                    <div class="game-card-actions">
+                        <button class="btn btn-sm btn-info btn-action" onclick="viewGame(${game.id})" aria-label="Ver detalles de ${escapeHtml(game.nombre)}">
+                            <i class="fas fa-eye"></i> Ver
+                        </button>
+                        <button class="btn btn-sm btn-warning btn-action" onclick="editGame(${game.id})" aria-label="Editar ${escapeHtml(game.nombre)}">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn btn-sm btn-danger btn-action" onclick="confirmDelete(${game.id}, '${escapeHtml(game.nombre)}')" aria-label="Eliminar ${escapeHtml(game.nombre)}">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderPagination() {
+            const pagination = document.getElementById('pagination');
+            const paginationInfo = document.getElementById('paginationInfo');
+            
+            const start = (currentPage - 1) * currentLimit + 1;
+            const end = Math.min(currentPage * currentLimit, totalGames);
+            paginationInfo.textContent = `Mostrando ${start} a ${end} de ${totalGames} juegos`;
+
+            let html = '';
+
+            // Previous button
+            html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;" aria-label="Página anterior" ${currentPage === 1 ? 'tabindex="-1"' : ''}>
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Page numbers
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage < maxButtons - 1) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            if (startPage > 1) {
+                html += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="changePage(1); return false;" aria-label="Ir a página 1">1</a>
+                    </li>
+                `;
+                if (startPage > 2) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i}); return false;" aria-label="Ir a página ${i}" ${i === currentPage ? 'aria-current="page"' : ''}>${i}</a>
+                    </li>
+                `;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+                html += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="changePage(${totalPages}); return false;" aria-label="Ir a página ${totalPages}">${totalPages}</a>
+                    </li>
+                `;
+            }
+
+            // Next button
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;" aria-label="Página siguiente" ${currentPage === totalPages ? 'tabindex="-1"' : ''}>
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+
+            pagination.innerHTML = html;
+        }
+
+        function updateTotalInfo() {
+            document.getElementById('totalInfo').textContent = `Total: ${totalGames} juego${totalGames !== 1 ? 's' : ''}`;
+        }
+
+        function changePage(page) {
+            if (page < 1 || page > totalPages || page === currentPage) return;
+            currentPage = page;
+            debounceLoad();
+        }
+
+        function viewGame(id) {
+            window.location.href = `details.html?id=${id}`;
+        }
+
+        function editGame(id) {
+            window.location.href = `edit.html?id=${id}`;
+        }
+
+        function confirmDelete(id, name) {
+            gameToDelete = id;
+            document.getElementById('deleteGameName').textContent = name;
+            deleteModal.show();
+        }
+
+        async function handleDeleteConfirm() {
+            if (!gameToDelete) return;
+
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
+
+            // Optimistic UI: mark row as deleting
+            const row = document.getElementById(`row-${gameToDelete}`);
+            const card = document.getElementById(`card-${gameToDelete}`);
+            if (row) row.classList.add('row-deleting');
+            if (card) card.classList.add('row-deleting');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/juegos/${gameToDelete}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                deleteModal.hide();
+                showToast('Juego eliminado correctamente', 'success');
+                
+                // Clear cache and reload
+                cache.clear();
+                
+                // If current page becomes empty after deletion, go to previous page
+                if (totalGames % currentLimit === 1 && currentPage > 1) {
+                    currentPage--;
+                }
+                
+                setTimeout(() => loadGames(), 300);
+            } catch (error) {
+                // Revert optimistic UI
+                if (row) row.classList.remove('row-deleting');
+                if (card) card.classList.remove('row-deleting');
+                
+                showToast(`Error al eliminar: ${error.message}`, 'danger');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Eliminar';
+                gameToDelete = null;
+            }
+        }
+
+        function showLoading() {
+            hideAll();
+            document.getElementById('loadingState').style.display = 'block';
+        }
+
+        function showError(message) {
+            hideAll();
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').style.display = 'block';
+        }
+
+        function hideAll() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('tableView').style.display = 'none';
+            document.getElementById('paginationContainer').style.display = 'none';
+        }
+
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = `toast-${Date.now()}`;
+            
+            const bgClass = type === 'success' ? 'bg-success' : type === 'danger' ? 'bg-danger' : 'bg-info';
+            
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+            toast.show();
+            
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+    </script>
+</body>
+</html>
