@@ -396,18 +396,22 @@
         }
 
         async function loadGames() {
-            const cacheKey = `${currentPage}-${currentLimit}`;
-            const cachedData = cache.get(cacheKey);
-            
-            if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
-                renderGames(cachedData.data);
-                return;
-            }
-
-            showLoading();
-
             try {
-                const response = await fetch(`${API_BASE_URL}/juegos?page=${currentPage}&limit=${currentLimit}`);
+                showLoading();
+                
+                // Asegurar que los parámetros sean números válidos
+                const page = Math.max(1, parseInt(currentPage) || 1);
+                const limit = Math.max(1, parseInt(currentLimit) || 10);
+                
+                const cacheKey = `${page}-${limit}`;
+                const cachedData = cache.get(cacheKey);
+                
+                if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
+                    renderGames(cachedData.data);
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE_URL}/juegos?page=${page}&limit=${limit}`);
                 
                 if (!response.ok) {
                     throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -415,7 +419,6 @@
 
                 const data = await response.json();
                 
-                // Cache the result
                 cache.set(cacheKey, {
                     data: data,
                     timestamp: Date.now()
@@ -423,6 +426,7 @@
 
                 renderGames(data);
             } catch (error) {
+                console.error('Error:', error);
                 showError(error.message);
             }
         }
@@ -581,9 +585,15 @@
         }
 
         function changePage(page) {
-            if (page < 1 || page > totalPages || page === currentPage) return;
-            currentPage = page;
-            debounceLoad();
+            // Validar que page sea un número válido y esté en rango
+            const pageNum = parseInt(page);
+            if (isNaN(pageNum) || pageNum < 1 || pageNum > totalPages || pageNum === currentPage) {
+                return;
+            }
+            
+            currentPage = pageNum;
+            cache.clear(); // Limpiar caché al cambiar de página
+            loadGames();
         }
 
         function viewGame(id) {
@@ -607,41 +617,40 @@
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
 
-            // Optimistic UI: mark row as deleting
-            const row = document.getElementById(`row-${gameToDelete}`);
-            const card = document.getElementById(`card-${gameToDelete}`);
-            if (row) row.classList.add('row-deleting');
-            if (card) card.classList.add('row-deleting');
-
             try {
                 const response = await fetch(`${API_BASE_URL}/juegos/${gameToDelete}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ confirmacion: true })
                 });
 
                 if (!response.ok) {
                     throw new Error(`Error ${response.status}: ${response.statusText}`);
                 }
 
-                const result = await response.json();
-                
                 deleteModal.hide();
-                showToast('Juego eliminado correctamente', 'success');
+                showToast('✅ Juego eliminado correctamente', 'success');
                 
-                // Clear cache and reload
-                cache.clear();
+                // Decrementar el contador total
+                totalGames--;
                 
-                // If current page becomes empty after deletion, go to previous page
-                if (totalGames % currentLimit === 1 && currentPage > 1) {
+                // Si esta página quedaría vacía, ir a la página anterior
+                const itemsInCurrentPage = Math.min(currentLimit, totalGames - (currentPage - 1) * currentLimit);
+                if (itemsInCurrentPage <= 0 && currentPage > 1) {
                     currentPage--;
                 }
                 
-                setTimeout(() => loadGames(), 300);
+                // Esperar antes de recargar
+                setTimeout(() => {
+                    cache.clear();
+                    loadGames();
+                }, 500);
+
             } catch (error) {
-                // Revert optimistic UI
-                if (row) row.classList.remove('row-deleting');
-                if (card) card.classList.remove('row-deleting');
-                
-                showToast(`Error al eliminar: ${error.message}`, 'danger');
+                console.error('Error:', error);
+                showToast(`❌ Error al eliminar: ${error.message}`, 'danger');
             } finally {
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = '<i class="fas fa-trash me-2"></i>Eliminar';

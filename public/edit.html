@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Juego</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .header .subtitle {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    /* Estados de carga y error */
+    .loading, .error-state, .not-found {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .error-state, .not-found {
+      color: #dc3545;
+    }
+
+    .error-state h2, .not-found h2 {
+      margin-bottom: 15px;
+      font-size: 24px;
+    }
+
+    .link-button {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: background 0.3s;
+    }
+
+    .link-button:hover {
+      background: #5568d3;
+    }
+
+    /* Metadatos */
+    .metadata {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 25px;
+    }
+
+    .metadata h3 {
+      font-size: 14px;
+      color: #6c757d;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metadata-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+
+    .metadata-item {
+      font-size: 13px;
+    }
+
+    .metadata-label {
+      color: #6c757d;
+      font-weight: 600;
+    }
+
+    .metadata-value {
+      color: #212529;
+    }
+
+    /* Badge de cambios no guardados */
+    .unsaved-badge {
+      display: none;
+      background: #ffc107;
+      color: #000;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .unsaved-badge.visible {
+      display: block;
+    }
+
+    /* Formulario */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .required {
+      color: #dc3545;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+      font-family: inherit;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .error-message {
+      color: #dc3545;
+      font-size: 13px;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .error-message.visible {
+      display: block;
+    }
+
+    input.error, textarea.error, select.error {
+      border-color: #dc3545;
+    }
+
+    /* Botones */
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #5a6268;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #c82333;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #28a745;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: none;
+      animation: slideIn 0.3s ease-out;
+      z-index: 1000;
+    }
+
+    .toast.visible {
+      display: block;
+    }
+
+    .toast.error {
+      background: #dc3545;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* Modal de confirmación */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.visible {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+
+    .modal-content h3 {
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .modal-content p {
+      color: #666;
+      margin-bottom: 25px;
+      line-height: 1.6;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .button-group {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>✏️ Editar Juego</h1>
+        <p class="subtitle">Actualiza la información del juego</p>
+      </div>
+
+      <div class="content">
+        <!-- Estado de carga -->
+        <div id="loadingState" class="loading">
+          <div class="spinner"></div>
+          <p>Cargando datos del juego...</p>
+        </div>
+
+        <!-- Estado de error -->
+        <div id="errorState" class="error-state" style="display: none;">
+          <h2>❌ Error al cargar</h2>
+          <p id="errorMessage"></p>
+          <a href="list.html" class="link-button">← Volver a la lista</a>
+        </div>
+
+        <!-- Estado de no encontrado -->
+        <div id="notFoundState" class="not-found" style="display: none;">
+          <h2>🔍 Juego no encontrado</h2>
+          <p>El juego con el ID especificado no existe o fue eliminado.</p>
+          <a href="list.html" class="link-button">← Volver a la lista</a>
+        </div>
+
+        <!-- Formulario de edición -->
+        <div id="editForm" style="display: none;">
+          <!-- Badge de cambios no guardados -->
+          <div id="unsavedBadge" class="unsaved-badge">
+            ⚠️ Hay cambios sin guardar
+          </div>
+
+          <!-- Metadatos del juego -->
+          <div id="metadata" class="metadata" style="display: none;">
+            <h3>📋 Información del registro</h3>
+            <div class="metadata-grid">
+              <div class="metadata-item">
+                <span class="metadata-label">ID:</span>
+                <span class="metadata-value" id="metaId">-</span>
+              </div>
+              <div class="metadata-item">
+                <span class="metadata-label">Creado:</span>
+                <span class="metadata-value" id="metaCreated">-</span>
+              </div>
+              <div class="metadata-item">
+                <span class="metadata-label">Actualizado:</span>
+                <span class="metadata-value" id="metaUpdated">-</span>
+              </div>
+            </div>
+          </div>
+
+          <form id="gameForm">
+            <input type="hidden" id="gameId" name="id">
+
+            <div class="form-group">
+              <label for="nombre">Nombre del juego <span class="required">*</span></label>
+              <input type="text" id="nombre" name="nombre" required>
+              <div id="nombreError" class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="genero">Género</label>
+              <select id="genero" name="genero">
+                <option value="">Seleccionar género</option>
+                <option value="Acción">Acción</option>
+                <option value="Aventura">Aventura</option>
+                <option value="RPG">RPG</option>
+                <option value="Estrategia">Estrategia</option>
+                <option value="Deportes">Deportes</option>
+                <option value="Simulación">Simulación</option>
+                <option value="Puzzle">Puzzle</option>
+                <option value="Terror">Terror</option>
+              </select>
+              <div id="generoError" class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="precio">Precio (USD)</label>
+              <input type="number" id="precio" name="precio" step="0.01" min="0">
+              <div id="precioError" class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="descripcion">Descripción</label>
+              <textarea id="descripcion" name="descripcion" rows="5"></textarea>
+              <div id="descripcionError" class="error-message"></div>
+            </div>
+
+            <div class="button-group">
+              <button type="submit" class="btn-primary" id="submitBtn">
+                💾 Guardar Cambios
+              </button>
+              <button type="button" class="btn-secondary" id="resetBtn">
+                ↺ Restablecer
+              </button>
+              <button type="button" class="btn-danger" id="deleteBtn">
+                🗑️ Eliminar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast de notificación -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Modal de confirmación para eliminar -->
+  <div id="deleteModal" class="modal">
+    <div class="modal-content">
+      <h3>⚠️ Confirmar eliminación</h3>
+      <p>¿Estás seguro de que deseas eliminar este juego? Esta acción no se puede deshacer.</p>
+      <div class="modal-buttons">
+        <button class="btn-secondary" id="cancelDeleteBtn">Cancelar</button>
+        <button class="btn-danger" id="confirmDeleteBtn">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación para abandonar página -->
+  <div id="leaveModal" class="modal">
+    <div class="modal-content">
+      <h3>⚠️ Cambios sin guardar</h3>
+      <p>Tienes cambios sin guardar. ¿Estás seguro de que deseas salir sin guardar?</p>
+      <div class="modal-buttons">
+        <button class="btn-secondary" id="cancelLeaveBtn">Cancelar</button>
+        <button class="btn-danger" id="confirmLeaveBtn">Salir sin guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Cambiar la URL base de la API
+    const API_BASE_URL = '/api/juegos';
+    
+    // ==========================================
+    // CONFIGURACIÓN Y VARIABLES GLOBALES
+    // ==========================================
+    
+    // Estado de la aplicación
+    let originalData = null; // Datos originales cargados del servidor
+    let hasUnsavedChanges = false; // Flag para cambios no guardados
+    let gameId = null; // ID del juego que se está editando
+
+    // Referencias a elementos del DOM
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const notFoundState = document.getElementById('notFoundState');
+    const editForm = document.getElementById('editForm');
+    const gameForm = document.getElementById('gameForm');
+    const unsavedBadge = document.getElementById('unsavedBadge');
+    const metadata = document.getElementById('metadata');
+    const toast = document.getElementById('toast');
+    const deleteModal = document.getElementById('deleteModal');
+    const leaveModal = document.getElementById('leaveModal');
+
+    // ==========================================
+    // INICIALIZACIÓN
+    // ==========================================
+    
+    /**
+     * Función principal que se ejecuta al cargar la página
+     * 1. Extrae el ID de la URL
+     * 2. Si no hay ID, muestra advertencia
+     * 3. Si hay ID, carga los datos del juego
+     */
+    async function init() {
+      // Extraer ID de la URL (formato: ?id=123)
+      const urlParams = new URLSearchParams(window.location.search);
+      gameId = urlParams.get('id');
+
+      // Si no hay ID, mostrar advertencia
+      if (!gameId) {
+        showError('No se especificó un ID de juego. Por favor, accede a esta página desde la lista de juegos.');
+        return;
+      }
+
+      // Cargar datos del juego
+      await loadGameData();
+    }
+
+    // ==========================================
+    // CARGA DE DATOS
+    // ==========================================
+    
+    /**
+     * Carga los datos del juego desde el servidor
+     * - Hace GET /juegos/:id
+     * - Prellenaa el formulario con los datos
+     * - Maneja errores 404 y otros
+     */
+    async function loadGameData() {
+        try {
+            showLoading();
+
+            // Usar la URL correcta para obtener el juego
+            const response = await fetch(`${API_BASE_URL}/${gameId}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    showNotFound();
+                    return;
+                }
+                throw new Error(data.mensaje || 'Error al cargar el juego');
+            }
+
+            // El backend devuelve { mensaje, juego } - extraemos juego
+            const gameData = data.juego || data;
+            
+            // Guardar datos originales para detectar cambios
+            originalData = { ...gameData };
+            
+            // Prellenar formulario
+            fillForm(gameData);
+            
+            // Mostrar metadatos si existen
+            showMetadata(gameData);
+            
+            // Mostrar formulario
+            showForm();
+
+            // Configurar listeners para detectar cambios
+            setupChangeDetection();
+
+        } catch (error) {
+            console.error('Error al cargar juego:', error);
+            showError(error.message);
+        }
+    }
+
+    /**
+     * Rellena el formulario con los datos del juego
+     */
+    function fillForm(data) {
+      document.getElementById('gameId').value = data.id || '';
+      document.getElementById('nombre').value = data.nombre || '';
+      document.getElementById('genero').value = data.genero || '';
+      document.getElementById('precio').value = data.precio || '';
+      document.getElementById('descripcion').value = data.descripcion || '';
+    }
+
+    /**
+     * Muestra los metadatos del juego (ID, fechas)
+     */
+    function showMetadata(data) {
+      if (data.id) {
+        document.getElementById('metaId').textContent = data.id;
+      }
+
+      // Intentar diferentes formatos de fecha que podría enviar el backend
+      const fechaCreacion = data.fecha_lanzamiento || data.fechaCreacion || data.createdAt || data.fecha_creacion;
+      const fechaActualizacion = data.fecha_actualizacion || data.updatedAt || data.fechaActualizacion;
+
+      if (fechaCreacion) {
+          document.getElementById('metaCreated').textContent = formatDate(fechaCreacion);
+      }
+
+      if (fechaActualizacion) {
+          document.getElementById('metaUpdated').textContent = formatDate(fechaActualizacion);
+      } else if (fechaCreacion) {
+          // Si no hay fecha de actualización, usar la de creación
+          document.getElementById('metaUpdated').textContent = formatDate(fechaCreacion);
+      }
+
+      // Mostrar sección de metadatos si hay al menos un dato
+      if (data.id || fechaCreacion || fechaActualizacion) {
+        metadata.style.display = 'block';
+      }
+    }
+
+    function formatDate(dateString) {
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+      } catch {
+        return dateString || '-';
+      }
+    }
+
+    // ==========================================
+    // DETECCIÓN DE CAMBIOS
+    // ==========================================
+    
+    /**
+     * Configura listeners para detectar cambios en el formulario
+     * - Compara valores actuales con originales
+     * - Muestra badge de "cambios no guardados"
+     * - Previene navegación accidental
+     */
+    function setupChangeDetection() {
+      const inputs = gameForm.querySelectorAll('input, select, textarea');
+      
+      inputs.forEach(input => {
+        input.addEventListener('input', checkForChanges);
+        input.addEventListener('change', checkForChanges);
+      });
+
+      // Prevenir salida de página con cambios no guardados
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    /**
+     * Verifica si hay cambios comparando con datos originales
+     */
+    function checkForChanges() {
+      const currentData = getFormData();
+      
+      // Comparar cada campo con el original
+      const changed = Object.keys(currentData).some(key => {
+        const current = currentData[key];
+        const original = originalData[key];
+        
+        // Manejar valores vacíos y null
+        const currentVal = current === '' ? null : current;
+        const originalVal = original === '' || original === undefined ? null : original;
+        
+        return currentVal != originalVal; // Usar != para comparar null/undefined
+      });
+
+      hasUnsavedChanges = changed;
+      
+      // Mostrar u ocultar badge
+      if (hasUnsavedChanges) {
+        unsavedBadge.classList.add('visible');
+      } else {
+        unsavedBadge.classList.remove('visible');
+      }
+    }
+
+    /**
+     * Maneja el evento beforeunload para advertir sobre cambios no guardados
+     */
+    function handleBeforeUnload(e) {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = ''; // Requerido para Chrome
+        return '';
+      }
+    }
+
+    /**
+     * Obtiene los datos actuales del formulario
+     */
+    function getFormData() {
+      return {
+        nombre: document.getElementById('nombre').value.trim(),
+        genero: document.getElementById('genero').value,
+        precio: document.getElementById('precio').value,
+        descripcion: document.getElementById('descripcion').value.trim()
+      };
+    }
+
+    // ==========================================
+    // VALIDACIÓN
+    // ==========================================
+    
+    /**
+     * Valida el formulario antes de enviar
+     * Mismas reglas que en create:
+     * - nombre requerido, mínimo 3 caracteres
+     * - precio opcional pero debe ser >= 0
+     * - descripción opcional
+     */
+    function validateForm() {
+      let isValid = true;
+      clearErrors();
+
+      const nombre = document.getElementById('nombre').value.trim();
+      const precio = document.getElementById('precio').value;
+
+      // Validar nombre
+      if (!nombre) {
+        showFieldError('nombre', 'El nombre es requerido');
+        isValid = false;
+      } else if (nombre.length < 3) {
+        showFieldError('nombre', 'El nombre debe tener al menos 3 caracteres');
+        isValid = false;
+      }
+
+      // Validar precio (opcional pero si se proporciona debe ser válido)
+      if (precio && parseFloat(precio) < 0) {
+        showFieldError('precio', 'El precio no puede ser negativo');
+        isValid = false;
+      }
+
+      return isValid;
+    }
+
+    /**
+     * Muestra error en un campo específico
+     */
+    function showFieldError(fieldName, message) {
+      const field = document.getElementById(fieldName);
+      const errorDiv = document.getElementById(`${fieldName}Error`);
+      
+      field.classList.add('error');
+      errorDiv.textContent = message;
+      errorDiv.classList.add('visible');
+    }
+
+    /**
+     * Limpia todos los errores del formulario
+     */
+    function clearErrors() {
+      const fields = ['nombre', 'genero', 'precio', 'descripcion'];
+      fields.forEach(field => {
+        document.getElementById(field).classList.remove('error');
+        document.getElementById(`${field}Error`).classList.remove('visible');
+      });
+    }
+
+    // ==========================================
+    // ENVÍO DE ACTUALIZACIÓN
+    // ==========================================
+    
+    /**
+     * Maneja el envío del formulario
+     * Estrategia: Enviar TODOS los campos (más simple y confiable)
+     * 
+     * Alternativa: Enviar solo campos modificados
+     * - Ventaja: Menor payload, más eficiente
+     * - Desventaja: Más complejo, puede causar problemas con valores null/undefined
+     * 
+     * Para producción, se recomienda enviar todos los campos para evitar
+     * inconsistencias y simplificar la lógica del backend
+     */
+    gameForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!validateForm()) {
+        showToast('Por favor corrige los errores en el formulario', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.textContent;
+      
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Guardando...';
+
+        // Obtener datos del formulario
+        const formData = getFormData();
+
+        // Convertir precio a número si tiene valor
+        if (formData.precio) {
+          formData.precio = parseFloat(formData.precio);
+        }
+
+        // Enviar PUT con todos los campos
+        const response = await fetch(`${API_BASE_URL}/${gameId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) {
+          // Manejar errores de validación del backend
+          if (response.status === 400) {
+            const errorData = await response.json();
+            handleValidationErrors(errorData);
+            return;
+          }
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
+        // Actualizar datos originales con la respuesta
+        if (result.juego) {
+          originalData = { ...result.juego };
+        } else {
+          originalData = { ...formData };
+        }
+
+        // Marcar como guardado
+        hasUnsavedChanges = false;
+        unsavedBadge.classList.remove('visible');
+
+        // Mostrar confirmación
+        showToast('✅ Juego actualizado exitosamente');
+
+        // Opcional: Redirigir a detalle después de 1 segundo
+        setTimeout(() => {
+          window.location.href = `index.html?id=${gameId}`;
+        }, 1000);
+
+      } catch (error) {
+        console.error('Error al actualizar juego:', error);
+        showToast(`Error al actualizar: ${error.message}`, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
+
+    /**
+     * Maneja errores de validación devueltos por el backend
+     * Mapea errores a campos específicos
+     */
+    function handleValidationErrors(errorData) {
+      // El formato de errores puede variar según el backend
+      // Ejemplo 1: { errors: { nombre: 'mensaje', precio: 'mensaje' } }
+      // Ejemplo 2: { mensaje: 'Error general', errores: [...] }
+      
+      if (errorData.errors) {
+        Object.keys(errorData.errors).forEach(field => {
+          if (document.getElementById(field)) {
+            showFieldError(field, errorData.errors[field]);
+          }
+        });
+      } else if (errorData.mensaje) {
+        showToast(errorData.mensaje, 'error');
+      } else {
+        showToast('Error de validación en el servidor', 'error');
+      }
+    }
+
+    // ==========================================
+    // BOTÓN RESET
+    // ==========================================
+    
+    /**
+     * Restaura el formulario a los valores originales
+     */
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (hasUnsavedChanges) {
+        if (confirm('¿Descartar todos los cambios y restaurar valores originales?')) {
+          fillForm(originalData);
+          hasUnsavedChanges = false;
+          unsavedBadge.classList.remove('visible');
+          clearErrors();
+          showToast('Valores restaurados');
+        }
+      }
+    });
+
+    // ==========================================
+    // ELIMINACIÓN
+    // ==========================================
+    
+    /**
+     * Maneja el botón de eliminar
+     * Muestra modal de confirmación antes de proceder
+     */
+    document.getElementById('deleteBtn').addEventListener('click', () => {
+      deleteModal.classList.add('visible');
+    });
+
+    // Cancelar eliminación
+    document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+      deleteModal.classList.remove('visible');
+    });
+
+    // Confirmar eliminación
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/${gameId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                // Agregar body con confirmación que requiere el backend
+                body: JSON.stringify({ confirmacion: true })
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al eliminar el juego');
+            }
+
+            showToast('🗑️ Juego eliminado exitosamente');
+            
+            // Redirigir al listado
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+
+        } catch (error) {
+            console.error('Error:', error);
+            showToast(`Error al eliminar: ${error.message}`, 'error');
+        } finally {
+            deleteModal.classList.remove('visible');
+        }
+    });
+
+    // ==========================================
+    // UTILIDADES DE UI
+    // ==========================================
+    
+    function showLoading() {
+      loadingState.style.display = 'block';
+      errorState.style.display = 'none';
+      notFoundState.style.display = 'none';
+      editForm.style.display = 'none';
+    }
+
+    function showError(message) {
+      loadingState.style.display = 'none';
+      errorState.style.display = 'block';
+      notFoundState.style.display = 'none';
+      editForm.style.display = 'none';
+      document.getElementById('errorMessage').textContent = message;
+    }
+
+    function showNotFound() {
+      loadingState.style.display = 'none';
+      errorState.style.display = 'none';
+      notFoundState.style.display = 'block';
+      editForm.style.display = 'none';
+    }
+
+    function showForm() {
+      loadingState.style.display = 'none';
+      errorState.style.display = 'none';
+      notFoundState.style.display = 'none';
+      editForm.style.display = 'block';
+    }
+
+    /**
+     * Muestra un toast de notificación
+     * @param {string} message - Mensaje a mostrar
+     * @param {string} type - 'success' o 'error'
+     */
+    function showToast(message, type = 'success') {
+      toast.textContent = message;
+      toast.className = 'toast visible';
+      
+      if (type === 'error') {
+        toast.classList.add('error');
+      }
+
+      // Ocultar después de 3 segundos
+      setTimeout(() => {
+        toast.classList.remove('visible');
+      }, 3000);
+    }
+
+    // ==========================================
+    // INICIAR APLICACIÓN
+    // ==========================================
+    
+    // Ejecutar init cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

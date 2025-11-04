@@ -12,18 +12,23 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Configurar carpeta de archivos estáticos
+// Configurar carpeta de archivos estáticos (servirá public/*)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rutas API (las mantenemos con el prefijo /api)
+// Rutas API con prefijo /api
 app.get('/api/juegos', ObetenerTodosLosJuegos);
 app.get('/api/juegos/:id', ObetenerTodosLosJuegosPorId);
 app.post('/api/juegos', crearJuego);
 app.put('/api/juegos/:id', actualizarJuego);
 app.delete('/api/juegos/:id', eliminarJuego);
 
-// Ruta para servir index.html en la raíz
-app.get('/', (req, res) => {
+// Manejar todas las demás rutas - MODIFICADO
+app.use((req, res) => {
+    // Si es una ruta API que no existe, devolver 404 JSON
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ mensaje: 'Endpoint no encontrado' });
+    }
+    // Si no, servir index.html para rutas del frontend
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
