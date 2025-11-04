@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { ProbarConexion}   = require('./config/BaseDatos');
-const { ObetenerTodosLosJuegos } = require('./controladores/juegos.controlador');
+const { ObetenerTodosLosJuegos, ObetenerTodosLosJuegosPorId, crearJuego, actualizarJuego, eliminarJuego } = require('./controladores/juegos.controlador');
 
 const app = express();
 const PORT =process.env.PORT || 3000;
@@ -16,6 +16,10 @@ app.get('/', (req, res) => {
 }); 
 
 app.get('/api/juegos', ObetenerTodosLosJuegos);
+app.get('/api/juegos/:id', ObetenerTodosLosJuegosPorId);
+app.post('/api/juegos', crearJuego);
+app.put('/api/juegos/:id', actualizarJuego);
+app.delete('/api/juegos/:id', eliminarJuego);
 
 const iniciarServidor = async () => {
     try {
