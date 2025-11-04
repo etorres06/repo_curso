@@ -282,6 +282,28 @@
       </div>
 
       <div class="form-group">
+        <label for="plataforma">Plataforma</label>
+        <select 
+          id="plataforma" 
+          name="plataforma"
+          aria-describedby="plataformaHelp plataformaError"
+        >
+          <option value="">Selecciona una plataforma</option>
+          <option value="PC">PC</option>
+          <option value="PS5">PlayStation 5</option>
+          <option value="PS4">PlayStation 4</option>
+          <option value="Xbox Series">Xbox Series X/S</option>
+          <option value="Xbox One">Xbox One</option>
+          <option value="Switch">Nintendo Switch</option>
+          <option value="Mobile">Mobile</option>
+        </select>
+        <span id="plataformaHelp" class="help-text">
+          Opcional. Selecciona la plataforma principal del juego
+        </span>
+        <span id="plataformaError" class="error-message" role="alert"></span>
+      </div>
+
+      <div class="form-group">
         <label for="precio">Precio (USD)</label>
         <input 
           type="number" 
@@ -333,6 +355,7 @@
     const fields = {
       nombre: document.getElementById('nombre'),
       genero: document.getElementById('genero'),
+      plataforma: document.getElementById('plataforma'),
       precio: document.getElementById('precio'),
       descripcion: document.getElementById('descripcion')
     };
@@ -340,6 +363,7 @@
     const errors = {
       nombre: document.getElementById('nombreError'),
       genero: document.getElementById('generoError'),
+      plataforma: document.getElementById('plataformaError'),
       precio: document.getElementById('precioError'),
       descripcion: document.getElementById('descripcionError')
     };
@@ -460,7 +484,10 @@
       const payload = {
         nombre: fields.nombre.value.trim(),
         genero: fields.genero.value.trim() || undefined,
-        descripcion: fields.descripcion.value.trim() || undefined
+        plataforma: fields.plataforma.value.trim() || undefined,
+        descripcion: fields.descripcion.value.trim() || undefined,
+        desarrollador: "Sin especificar", // Agregamos valor por defecto
+        fecha_lanzamiento: new Date().toISOString().split('T')[0] // Cambiamos el nombre del campo
       };
 
       // Manejar precio opcional

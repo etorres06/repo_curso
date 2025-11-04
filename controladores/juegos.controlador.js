@@ -51,16 +51,16 @@ const ObetenerTodosLosJuegosPorId =  async (req, res) => {
 
 const crearJuego = async (req, res) => {
     try {
-        const { nombre, genero, plataforma, precio, fecha_lanzamiento, desarrollador, descripcion } = req.body;
+        const { nombre, genero, plataforma, precio, fecha_lanzamiento, desarrollador = "Sin especificar", descripcion } = req.body;
         
         // Validaciones
         if (!nombre?.trim()) return res.status(400).json({ mensaje: 'El nombre es requerido' });
         if (!genero?.trim()) return res.status(400).json({ mensaje: 'El género es requerido' });
         if (!plataforma?.trim()) return res.status(400).json({ mensaje: 'La plataforma es requerida' });
         if (!precio || precio <= 0) return res.status(400).json({ mensaje: 'El precio debe ser mayor a 0' });
-        if (!fecha_lanzamiento) return res.status(400).json({ mensaje: 'La fecha de lanzamiento es requerida' });
-        if (!desarrollador?.trim()) return res.status(400).json({ mensaje: 'El desarrollador es requerido' });
         if (!descripcion?.trim()) return res.status(400).json({ mensaje: 'La descripción es requerida' });
+
+        // No validamos fecha_lanzamiento ya que siempre vendrá del frontend
 
         const consulta = `
             INSERT INTO juegos (nombre, genero, plataforma, precio, fecha_lanzamiento, desarrollador, descripcion)
@@ -70,7 +70,7 @@ const crearJuego = async (req, res) => {
             genero.trim(),
             plataforma.trim(),
             parseFloat(precio),
-            new Date(fecha_lanzamiento),
+            fecha_lanzamiento, // Ya viene en formato YYYY-MM-DD
             desarrollador.trim(),
             descripcion.trim()
         ];
