@@ -2,46 +2,42 @@ const {pool} = require('../config/BaseDatos');
 
 const ObetenerTodosLosJuegos = async (req, res) => {
     try {
-        // Asegurar que page y limit sean números válidos
         let { page = '1', limit = '10' } = req.query;
         
-        // Convertir a números y validar
-        page = parseInt(page) || 1;
-        limit = parseInt(limit) || 10;
+        // Convertir y validar parámetros
+        page = Math.max(1, parseInt(page));
+        limit = Math.max(1, Math.min(50, parseInt(limit)));
         
-        // Asegurar valores positivos
-        page = Math.max(1, page);
-        limit = Math.max(1, Math.min(50, limit));
-        
-        // Obtener conteo total
+        // Obtener total de registros
         const conteoConsulta = 'SELECT COUNT(*) FROM juegos';
         const conteo = await pool.query(conteoConsulta);
         const total = parseInt(conteo.rows[0].count);
         
+        // Calcular total de páginas y ajustar página actual
+        const totalPages = Math.ceil(total / limit);
+        page = Math.min(page, Math.max(1, totalPages));
+        
         // Calcular offset
         const offset = (page - 1) * limit;
-
+        
         // Consulta principal
         const consulta = 'SELECT * FROM juegos ORDER BY id ASC LIMIT $1 OFFSET $2';
         const resultado = await pool.query(consulta, [limit, offset]);
 
-        // Calcular total de páginas
-        const totalPages = Math.ceil(total / limit);
-        
-        // Asegurar que la página actual no exceda el total
-        const currentPage = Math.min(page, Math.max(1, totalPages));
-
+        // Respuesta consistente
         res.json({
             juegos: resultado.rows,
             total: total,
-            pagina_actual: currentPage,
-            total_paginas: totalPages
+            pagina_actual: page,
+            total_paginas: totalPages,
+            limit: limit
         });
+        
     } catch (error) {
-        console.error('Error al obtener los juegos:', error);
-        res.status(500).json({ 
+        console.error('Error:', error);
+        res.status(500).json({
             mensaje: 'Error al obtener los juegos',
-            error: error.message 
+            error: error.message
         });
     } 
 };

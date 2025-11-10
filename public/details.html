@@ -377,7 +377,18 @@
     </style>
 </head>
 <body>
-    <div class="container">
+        <!--
+            public/details.html
+
+            Página de detalle de un juego.
+
+            Descripción:
+            - Recupera el ID desde la query string (?id=) y solicita los datos al endpoint
+                correspondiente. Renderiza la tarjeta principal y una lista de campos adicionales.
+            - IDs importantes: #gameCard, #loadingSpinner, #errorContainer, #additionalDetails.
+            - La función renderAdditionalFields muestra campos dinámicos que no están en la UI fija.
+        -->
+        <div class="container">
         <!-- Spinner de carga -->
         <div id="loadingSpinner" class="spinner-container">
             <div class="spinner"></div>
@@ -453,9 +464,22 @@
         </div>
     </div>
 
-    <script>
-        // Cambiar la URL base de la API para usar el prefijo correcto
-        const API_URL = '/api/juegos';
+            <script>
+                    /*
+                        Lógica de details.html (versión para un desarrollador junior)
+
+                        Resumen sencillo:
+                        - Obtenemos el parámetro "id" de la URL y pedimos los datos al backend.
+                        - Si recibimos el juego, lo mostramos en la tarjeta #gameCard.
+                        - Si el backend devuelve campos extra, los mostramos automáticamente en #additionalDetails.
+
+                        Consejos prácticos:
+                        - Para depurar, abrí DevTools y comprobá la petición fetch a `${API_URL}/{id}`.
+                        - Si agregás un campo nuevo en el backend, aparecerá en "Detalles adicionales" sin tocar código.
+                    */
+
+                    // Cambiar la URL base de la API para usar el prefijo correcto
+                    const API_URL = '/api/juegos';
 
         // Configuración de la API
         let currentGameId = null;
@@ -497,14 +521,16 @@
             try {
                 showLoading();
 
+                // Petición al backend para obtener el juego por ID
                 const response = await fetch(`${API_URL}/${currentGameId}`);
                 const data = await response.json();
 
-                // El backend devuelve { mensaje, juego } - extraemos juego
+                // El backend puede devolver { mensaje, juego } o directamente el objeto juego
                 const game = data.juego || data;
 
-                // Manejar error 404
+                // Manejo simple de errores HTTP:
                 if (response.status === 404) {
+                    // Mostrar UI específica de "no encontrado" para que el usuario entienda
                     showError(
                         'Juego no encontrado',
                         'El juego que buscas no existe o fue eliminado.',
@@ -513,14 +539,16 @@
                     return;
                 }
 
-                // Manejar otros errores HTTP
                 if (!response.ok) {
+                    // Para otros códigos (500, 400, etc.) lanzamos y lo manejamos abajo
                     throw new Error(`Error del servidor: ${response.status}`);
                 }
 
+                // Si todo fue bien, renderizamos el juego en la página
                 renderGame(game);
 
             } catch (error) {
+                // Errores comunes: problema de red, backend caído o respuesta malformada
                 console.error('Error al cargar el juego:', error);
                 showError(
                     'Error de conexión',

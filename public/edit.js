@@ -1,5 +1,24 @@
-// Módulo para manejar la vista "Editar juego"
-// Importamos helpers de API reutilizables
+/*
+  public/edit.js
+
+  Archivo: lógica de la página de edición (edit.html)
+
+  Propósito y comportamiento general:
+  - Carga los datos de un juego por ID (querystring ?id=...).
+  - Rellena el formulario de edición, detecta cambios y permite guardar (PUT).
+  - Gestiona la eliminación del registro (DELETE) mediante el helper apiDelete.
+
+  Interacción con el DOM:
+  - Busca elementos por ID que coinciden con los definidos en edit.html.
+  - Escucha eventos: submit del formulario, click en botones (reset, delete), input/change para detectar cambios.
+
+  Énfasis didáctico:
+  - Mantener originalData para comparar y detectar "cambios no guardados".
+  - Validación mínima del cliente (nombre obligatorio, precio >= 0 cuando exista).
+  - Manejo de errores: muestra mensajes en UI y toasts.
+*/
+
+// Importar helpers reutilizables para llamadas a la API
 import { apiGet, apiPut, apiDelete } from './utils/api.js';
 
 // Cambiar la URL base de la API
@@ -33,12 +52,25 @@ let originalData = null;
 let hasUnsavedChanges = false;
 
 // -------------------- Funciones de UI --------------------
+/*
+  showLoading()
+
+  - Muestra un spinner o estado de carga mientras se está obteniendo información del servidor.
+  - Es puramente una función de UI: no hace llamadas a la API.
+  - Si quisieras cambiar el spinner por otra animación, editá el HTML/CSS relacionado.
+*/
 function showLoading() {
   loadingState.style.display = 'block';
   errorState.style.display = 'none';
   notFoundState.style.display = 'none';
   editFormContainer.style.display = 'none';
 }
+/*
+  showError(message)
+
+  - Muestra la sección de error y coloca el mensaje proporcionado.
+  - Se usa cuando la petición al backend falla o los datos no pueden cargarse.
+*/
 function showError(message) {
   loadingState.style.display = 'none';
   errorState.style.display = 'block';
@@ -52,6 +84,12 @@ function showNotFound() {
   notFoundState.style.display = 'block';
   editFormContainer.style.display = 'none';
 }
+/*
+  showForm()
+
+  - Muestra el formulario para editar una vez que los datos fueron cargados correctamente.
+  - Si añadís nuevos inputs en el HTML, asegurate de que fillForm() los rellena.
+*/
 function showForm() {
   loadingState.style.display = 'none';
   errorState.style.display = 'none';

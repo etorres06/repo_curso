@@ -226,6 +226,17 @@
   </style>
 </head>
 <body>
+  <!--
+    public/create.html
+
+    Formulario de creación de un nuevo juego.
+
+    Puntos importantes:
+    - El formulario tiene validación en el cliente (campo nombre obligatorio y reglas para precio).
+    - Se implementa autosave en localStorage (clave: gameForm_autosave) para evitar pérdida de datos.
+    - IDs relevantes: #gameForm, #submitBtn, #alertSuccess, #alertError, #autosaveIndicator.
+    - Modificar atributos 'name' de los inputs afectará el payload enviado al backend.
+  -->
   <div class="container">
     <div class="header">
       <h1>🎮 Crear Nuevo Juego</h1>
@@ -345,7 +356,24 @@
     <a href="index.html" class="back-link">← Volver al listado</a>
   </div>
 
-  <script>
+    <script>
+    /*
+      Lógica de create.html (versión para principiantes)
+
+      Objetivo general:
+      - Permitir al usuario crear un juego desde un formulario.
+      - Proteger la entrada con validaciones y evitar pérdida de datos con autosave.
+
+      Conceptos claves para un junior:
+      - "Campos" son los inputs dentro de #gameForm. Los referenciamos mediante el objeto `fields`.
+      - El formulario se envía con fetch POST a '/api/juegos'. Si funciona, redirige a la lista.
+      - Autosave guarda una copia en localStorage cada 5s si hay contenido.
+
+      Puntos a editar si haces cambios:
+      - Si agregás un nuevo campo, añadilo a `fields`, `errors` y a `getFormPayload()`.
+      - Si cambiás el endpoint, actualizá la URL en la llamada fetch dentro del submit.
+    */
+
     const form = document.getElementById('gameForm');
     const submitBtn = document.getElementById('submitBtn');
     const alertSuccess = document.getElementById('alertSuccess');
@@ -398,6 +426,15 @@
         return null;
       }
     };
+
+    /*
+      Explicación de validación (para un junior):
+      - validationRules es un objeto donde cada propiedad es el nombre del campo
+        que queremos validar (por ejemplo "nombre" o "precio").
+      - Cada función recibe el valor actual del campo y debe devolver null si
+        el valor es válido, o una cadena con el mensaje de error si no lo es.
+      - validateField usa estas funciones para mostrar errores en la UI.
+    */
 
     // Mostrar error en campo
     function showFieldError(fieldName, message) {

@@ -1,7 +1,21 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+        <!--
+                public/index.html
+
+                Página principal del frontend: listado y gestión de juegos.
+
+                Comentarios:
+                - Este archivo contiene la UI (HTML + estilos) y la lógica principal en el
+                    bloque <script> al final del documento.
+                - Las secciones principales son: header, controles (limit/paginación), estados
+                    (loading/error/empty), vista de tabla (desktop) y vista de tarjetas (mobile),
+                    paginación, modal de eliminación y contenedor de toasts.
+                - Modificar las etiquetas marcadas con IDs (p.ej. #gamesTableBody, #limitSelect)
+                    actualizará directamente la interacción con el JS que maneja el DOM.
+        -->
+        <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Juegos</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
@@ -351,33 +365,108 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Configuration
-        const API_BASE_URL = '/api'; // Cambiado para usar rutas relativas
-        const CACHE_DURATION = 30000;
-        const DEBOUNCE_DELAY = 300;
+        <script>
+                /*
+                    Lógica principal (Listado de juegos)
 
-        // State
-        let currentPage = 1;
-        let currentLimit = 10;
-        let totalPages = 0;
-        let totalGames = 0;
-        let cache = new Map();
-        let deleteModal;
-        let gameToDelete = null;
-        let debounceTimer = null;
+                    Estructura y responsabilidades del script:
+                    - Configuración: constantes reutilizables (API_BASE_URL, cache, debounce).
+                    - Estado: variables que representan la página actual, límite, totales y cache.
+                    - Inicialización: lectura de querystring, setup de modal y listeners.
+                    - Fetch + caching: loadGames() hace fetch con paginado y cache simple.
+                    - Render: funciones separadas para tabla (desktop), tarjetas (mobile) y paginación.
+                    - UI helpers: mostrar/ocultar estados (loading, error, empty), toasts y escapeHtml.
+
+                    Interacción con el DOM (IDs clave):
+                    - #limitSelect: controla el número de ítems por página.
+                    - #gamesTableBody: tbody donde se inyectan las filas de la tabla.
+                    - #cardsView: contenedor para tarjetas responsive.
+                    - #pagination: contenedor de botones de paginación.
+                    - #deleteModal y #confirmDeleteBtn: manejo de eliminación.
+
+                    Buenas prácticas aplicadas:
+                    - Debounce en recargas por cambios de límite.
+                    - Cache simple en memoria (Map) por combinación página-límite.
+                    - Separación de renderizado por vista (table/cards).
+                */
+
+                // Configuration
+                const API_BASE_URL = '/api'; // Cambiado para usar rutas relativas
+                const CACHE_DURATION = 30000;
+                const DEBOUNCE_DELAY = 300;
+
+                // State
+                let currentPage = 1;
+                let currentLimit = 10;
+                let totalPages = 0;
+                let totalGames = 0;
+                let cache = new Map();
+                let deleteModal;
+                let gameToDelete = null;
+                let debounceTimer = null;
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-            setupEventListeners();
-            loadGames();
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                currentPage = parseInt(params.get('page')) || 1;
+                currentLimit = parseInt(document.getElementById('limitSelect').value) || 10;
+                
+                deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                setupEventListeners();
+                // Removemos la llamada a setupPagination ya que no es necesaria
+                
+                let retries = 3;
+                while (retries > 0) {
+                    try {
+                        await loadGames();
+                        break;
+                    } catch (error) {
+                        retries--;
+                        if (retries === 0) throw error;
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error en la inicialización:', error);
+                showError('Error al cargar los datos iniciales. Por favor, recarga la página.');
+            }
         });
 
         function setupEventListeners() {
-            document.getElementById('limitSelect').addEventListener('change', handleLimitChange);
+                        /*
+                            setupEventListeners()
+
+                            Qué hace:
+                            - Conecta los elementos del DOM a funciones que manejan eventos.
+                            - No realiza lógica de negocio: solo enlaza handlers.
+
+                            Elementos importantes:
+                            - #limitSelect -> when user changes items per page, recarga la lista.
+                            - #retryBtn -> reintenta la carga cuando hay error.
+                            - #confirmDeleteBtn -> confirma la eliminación mostrada en el modal.
+                            - #pagination -> delegación de clicks para navegar páginas.
+
+                            Nota para juniors:
+                            - Si renombrás algún ID en el HTML, actualizá la referencia aquí.
+                        */
+
+                        document.getElementById('limitSelect').addEventListener('change', handleLimitChange);
             document.getElementById('retryBtn').addEventListener('click', () => loadGames());
             document.getElementById('confirmDeleteBtn').addEventListener('click', handleDeleteConfirm);
+            
+            // Agregar el event listener de paginación aquí
+            const pagination = document.getElementById('pagination');
+            pagination.addEventListener('click', (e) => {
+                const button = e.target.closest('button[data-page]');
+                if (!button || button.disabled) return;
+                
+                const page = parseInt(button.dataset.page);
+                if (!isNaN(page) && page !== currentPage) {
+                    changePage(page);
+                }
+            });
         }
 
         function handleLimitChange(e) {
@@ -396,10 +485,25 @@
         }
 
         async function loadGames() {
-            try {
-                showLoading();
+                        /*
+                            loadGames()
+
+                            Qué hace:
+                            - Pide al backend la lista de juegos para la página y límite actuales.
+                            - Usa un cache en memoria para evitar pedir datos repetidos rápidamente.
+                            - En caso de respuesta correcta llama a renderGames() para actualizar la UI.
+
+                            Interacción con el DOM:
+                            - Muestra el estado de carga con showLoading().
+                            - En caso de error llama a showError(msg).
+
+                            Errores comunes:
+                            - "Failed to fetch": problema de red o servidor caído.
+                            - Respuesta con formato inesperado: revisá qué devuelve el backend.
+                        */
+                        try {
+                                showLoading();
                 
-                // Asegurar que los parámetros sean números válidos
                 const page = Math.max(1, parseInt(currentPage) || 1);
                 const limit = Math.max(1, parseInt(currentLimit) || 10);
                 
@@ -413,22 +517,53 @@
 
                 const response = await fetch(`${API_BASE_URL}/juegos?page=${page}&limit=${limit}`);
                 
+                if (response.status === 503) {
+                    // Si el servidor no está listo, reintentamos
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return loadGames();
+                }
+                
                 if (!response.ok) {
                     throw new Error(`Error ${response.status}: ${response.statusText}`);
                 }
 
                 const data = await response.json();
                 
+                if (!data.juegos || !Array.isArray(data.juegos)) {
+                    throw new Error('Formato de respuesta inválido');
+                }
+
                 cache.set(cacheKey, {
                     data: data,
                     timestamp: Date.now()
                 });
 
-                renderGames(data);
+                renderGames({
+                    juegos: data.juegos,
+                    total: data.total,
+                    totalPages: data.total_paginas,
+                    page: data.pagina_actual
+                });
+
             } catch (error) {
                 console.error('Error:', error);
+                if (error.message.includes('Failed to fetch')) {
+                    // Reintentamos si es un error de conexión
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return loadGames();
+                }
                 showError(error.message);
             }
+        }
+
+        function updateURL(page) {
+            const url = new URL(window.location);
+            if (page === 1) {
+                url.searchParams.delete('page');
+            } else {
+                url.searchParams.set('page', page);
+            }
+            window.history.pushState({ page }, '', url);
         }
 
         function renderGames(data) {
@@ -438,6 +573,7 @@
             totalGames = total;
             currentPage = page;
 
+            // Ocultar todos los estados y mostrar el que corresponda
             hideAll();
 
             if (juegos.length === 0) {
@@ -453,7 +589,17 @@
             document.getElementById('tableView').style.display = 'block';
             document.getElementById('paginationContainer').style.display = 'flex';
         }
+        /*
+          renderTable(juegos)
 
+          Qué hace:
+          - Recibe la lista de juegos y construye las filas de la tabla (HTML string).
+          - Inserta las filas en el <tbody id="gamesTableBody">.
+
+          Notas de mantenimiento:
+          - Usamos escapeHtml() para evitar inyección de HTML en campos de texto.
+          - Si agregás o quitás columnas en la tabla, actualizá esta plantilla.
+        */
         function renderTable(juegos) {
             const tbody = document.getElementById('gamesTableBody');
             tbody.innerHTML = juegos.map(game => `
@@ -477,6 +623,16 @@
             `).join('');
         }
 
+        /*
+          renderCards(juegos)
+
+          Qué hace:
+          - Construye tarjetas (cards) para cada juego, pensadas para pantallas pequeñas.
+          - Inserta las tarjetas dentro de #cardsView.
+
+          Importante:
+          - El CSS responsive oculta la tabla en móviles y muestra estas tarjetas.
+        */
         function renderCards(juegos) {
             const cardsView = document.getElementById('cardsView');
             cardsView.innerHTML = juegos.map(game => `
@@ -518,82 +674,94 @@
             const end = Math.min(currentPage * currentLimit, totalGames);
             paginationInfo.textContent = `Mostrando ${start} a ${end} de ${totalGames} juegos`;
 
-            let html = '';
+                        /*
+                            renderPagination()
 
-            // Previous button
+                            Qué hace:
+                            - Calcula el rango actual (start, end) y muestra información en #paginationInfo.
+                            - Crea los botones de paginación dentro de #pagination.
+
+                            Nota para juniors:
+                            - El evento de click está delegado en setupEventListeners() y lee el atributo data-page
+                                de cada botón para cambiar la página usando changePage(page).
+                        */
+                        let html = '';
+
+            // Botón anterior
             html += `
-                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;" aria-label="Página anterior" ${currentPage === 1 ? 'tabindex="-1"' : ''}>
+                <li class="page-item ${currentPage <= 1 ? 'disabled' : ''}">
+                    <button type="button" 
+                            class="page-link" 
+                            data-page="${currentPage - 1}"
+                            ${currentPage <= 1 ? 'disabled' : ''}>
                         <i class="fas fa-chevron-left"></i>
-                    </a>
+                    </button>
                 </li>
             `;
 
-            // Page numbers
-            const maxButtons = 5;
-            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
-
-            if (endPage - startPage < maxButtons - 1) {
-                startPage = Math.max(1, endPage - maxButtons + 1);
-            }
-
-            if (startPage > 1) {
-                html += `
-                    <li class="page-item">
-                        <a class="page-link" href="#" onclick="changePage(1); return false;" aria-label="Ir a página 1">1</a>
-                    </li>
-                `;
-                if (startPage > 2) {
-                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            // Páginas
+            for (let i = 1; i <= totalPages; i++) {
+                if (
+                    i === 1 || 
+                    i === totalPages || 
+                    (i >= currentPage - 1 && i <= currentPage + 1)
+                ) {
+                    html += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <button type="button" 
+                                    class="page-link" 
+                                    data-page="${i}"
+                                    ${i === currentPage ? 'aria-current="page"' : ''}>
+                                ${i}
+                            </button>
+                        </li>
+                    `;
+                } else if (i === currentPage - 2 || i === currentPage + 2) {
+                    html += `
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    `;
                 }
             }
 
-            for (let i = startPage; i <= endPage; i++) {
-                html += `
-                    <li class="page-item ${i === currentPage ? 'active' : ''}">
-                        <a class="page-link" href="#" onclick="changePage(${i}); return false;" aria-label="Ir a página ${i}" ${i === currentPage ? 'aria-current="page"' : ''}>${i}</a>
-                    </li>
-                `;
-            }
-
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-                }
-                html += `
-                    <li class="page-item">
-                        <a class="page-link" href="#" onclick="changePage(${totalPages}); return false;" aria-label="Ir a página ${totalPages}">${totalPages}</a>
-                    </li>
-                `;
-            }
-
-            // Next button
+            // Botón siguiente
             html += `
-                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;" aria-label="Página siguiente" ${currentPage === totalPages ? 'tabindex="-1"' : ''}>
+                <li class="page-item ${currentPage >= totalPages ? 'disabled' : ''}">
+                    <button type="button" 
+                            class="page-link" 
+                            data-page="${currentPage + 1}"
+                            ${currentPage >= totalPages ? 'disabled' : ''}>
                         <i class="fas fa-chevron-right"></i>
-                    </a>
+                    </button>
                 </li>
             `;
 
             pagination.innerHTML = html;
         }
 
-        function updateTotalInfo() {
-            document.getElementById('totalInfo').textContent = `Total: ${totalGames} juego${totalGames !== 1 ? 's' : ''}`;
+        async function changePage(page) {
+            if (page < 1 || page > totalPages || page === currentPage) return;
+            
+            try {
+                currentPage = page;
+                await loadGames();
+                
+                // Actualizar URL
+                const url = new URL(window.location);
+                url.searchParams.set('page', page);
+                window.history.pushState({ page }, '', url);
+                
+                // Scroll al inicio
+                window.scrollTo(0, 0);
+            } catch (error) {
+                console.error('Error al cambiar página:', error);
+                showError(error.message);
+            }
         }
 
-        function changePage(page) {
-            // Validar que page sea un número válido y esté en rango
-            const pageNum = parseInt(page);
-            if (isNaN(pageNum) || pageNum < 1 || pageNum > totalPages || pageNum === currentPage) {
-                return;
-            }
-            
-            currentPage = pageNum;
-            cache.clear(); // Limpiar caché al cambiar de página
-            loadGames();
+        function updateTotalInfo() {
+            document.getElementById('totalInfo').textContent = `Total: ${totalGames} juego${totalGames !== 1 ? 's' : ''}`;
         }
 
         function viewGame(id) {
@@ -611,11 +779,22 @@
         }
 
         async function handleDeleteConfirm() {
-            if (!gameToDelete) return;
+                        /*
+                            handleDeleteConfirm()
 
-            const confirmBtn = document.getElementById('confirmDeleteBtn');
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
+                            Qué hace:
+                            - Llama al backend para eliminar el juego cuyo ID está en gameToDelete.
+                            - Muestra un spinner en el botón de confirmación mientras espera la respuesta.
+                            - Si la eliminación es exitosa, actualiza el contador y recarga la lista.
+
+                            Seguridad:
+                            - Se envía { confirmacion: true } en el body porque el backend lo exige en algunos endpoints.
+                        */
+                        if (!gameToDelete) return;
+
+                        const confirmBtn = document.getElementById('confirmDeleteBtn');
+                        confirmBtn.disabled = true;
+                        confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
 
             try {
                 const response = await fetch(`${API_BASE_URL}/juegos/${gameToDelete}`, {

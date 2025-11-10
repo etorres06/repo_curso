@@ -347,6 +347,17 @@
   </style>
 </head>
 <body>
+  <!--
+    public/edit.html
+
+    Página para editar un juego existente.
+
+    Resumen:
+    - Carga datos por ID y prellena el formulario.
+    - Detecta cambios para evitar navegación accidental (beforeunload).
+    - Permite guardar (PUT), restablecer y eliminar (DELETE).
+    - IDs clave: #gameForm, #loadingState, #unsavedBadge, #deleteModal.
+  -->
   <div class="container">
     <div class="card">
       <div class="header">
@@ -483,6 +494,22 @@
   </div>
 
   <script>
+    /*
+      Lógica de edit.html (explicada para un developer junior)
+
+      Resumen sencillo:
+      - init(): toma el id de la URL y carga el juego con loadGameData().
+      - loadGameData(): hace GET al backend y prellena el formulario con fillForm().
+      - setupChangeDetection(): escucha cambios y activa una bandera si hay cambios no guardados.
+      - El submit del formulario envía los datos por PUT y maneja errores de validación.
+
+      Consejos:
+      - Si ves que los campos no se actualizan al cargar, comprobá que los IDs del HTML
+        coinciden con los usados en fillForm().
+      - Para desactivar la advertencia al cerrar con cambios sin guardar, remover
+        el listener 'beforeunload' en setupChangeDetection().
+    */
+
     // Cambiar la URL base de la API
     const API_BASE_URL = '/api/juegos';
     

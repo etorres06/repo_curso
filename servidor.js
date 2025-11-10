@@ -22,6 +22,17 @@ app.post('/api/juegos', crearJuego);
 app.put('/api/juegos/:id', actualizarJuego);
 app.delete('/api/juegos/:id', eliminarJuego);
 
+// Middleware para verificar estado de la BD
+app.use((req, res, next) => {
+    if (!dbReady && req.path.startsWith('/api/')) {
+        return res.status(503).json({
+            mensaje: 'Servicio no disponible',
+            error: 'Base de datos inicializando'
+        });
+    }
+    next();
+});
+
 // Manejar todas las demás rutas - MODIFICADO
 app.use((req, res) => {
     // Si es una ruta API que no existe, devolver 404 JSON
@@ -32,17 +43,20 @@ app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+let dbReady = false;
+
 const iniciarServidor = async () => {
     try {
         await ProbarConexion();
-
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-} );
+        dbReady = true;
+        
+        app.listen(PORT, () => {
+            console.log(`Servidor corriendo en http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error('Error de conexión a la base de datos:', error);
+        process.exit(1); // Terminar el proceso si no se puede conectar
     }
-     catch (error){
-            console.error('Error de conexión a la base de datos:', error);
-        }
-
 };
+
 iniciarServidor();
